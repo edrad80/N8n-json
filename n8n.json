@@ -1,0 +1,394 @@
+{
+  "name": "Goodhome Order Created",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "b3f150a8-fdf9-4031-9839-9aa7d0e7a681",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-832, -352],
+      "id": "a9a797c7-2aee-4583-8b5a-5ee836ef88da",
+      "name": "Webhook",
+      "webhookId": "b3f150a8-fdf9-4031-9839-9aa7d0e7a681"
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n  if (!$json || !$json.body || !$json.body.line_items) {\n    console.log('Error: Missing or invalid request body');\n    return [{ json: { error: 'Missing or invalid request body' } }];\n  }\n  const items = $json.body.line_items;\n  if (!Array.isArray(items)) {\n    console.log('Error: line_items is not an array');\n    return [{ json: { error: 'line_items is not an array' } }];\n  }\n  console.log(`Parsed ${items.length} WooCommerce items`);\n  return [{ json: { items: items.map(item => ({ sku: item.sku || '', quantity: item.quantity || 0 })) } }];\n} catch (error) {\n  console.error('Error in Split product items:', error);\n  return [{ json: { error: error.message } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-832, -160],
+      "id": "e6ec1f37-9c5c-4206-8757-0f06383c1889",
+      "name": "Split product items"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "{{$node[\"Split product items\"].json[\"error\"]}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "error-check-split",
+      "name": "Check Split Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-832, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n  const inputData = $input.first().json;\n  console.log('Input to Initialize Pagination:', JSON.stringify(inputData));\n  const items = inputData.items || [];\n  console.log('WooCommerce items:', items);\n  const output = [{ json: { page: 1, allProducts: [], keepGoing: true, wooCommerceItems: items } }];\n  console.log('Output of Initialize Pagination:', JSON.stringify(output));\n  return output;\n} catch (error) {\n  console.error('Error in Initialize Pagination:', error);\n  return [{ json: { error: error.message } }];\n}"
+      },
+      "id": "57b9c4bc-431d-4af1-90b5-44670f01ed1b",
+      "name": "Initialize Pagination",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-768, 80]
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n  console.log('Input to Check Continue:', JSON.stringify($input.first().json));\n  return [$input.first()];\n} catch (error) {\n  console.error('Error in Debug Before Check Continue:', error);\n  return [{ json: { error: error.message } }];\n}"
+      },
+      "id": "debug-before-should-continue",
+      "name": "Debug Before Check Continue",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-600, -240]
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n  const input = $input.first().json;\n  console.log('Evaluating keepGoing:', input.keepGoing, typeof input.keepGoing);\n  if (input.keepGoing === true) {\n    console.log('Check Continue: Taking true branch');\n    return { true: [$input.first()], false: [] };\n  } else {\n    console.log('Check Continue: Taking false branch');\n    return { true: [], false: [$input.first()] };\n  }\n} catch (error) {\n  console.error('Error in Check Continue:', error);\n  return { true: [], false: [$input.first()] };\n}"
+      },
+      "id": "b9883b8f-381e-4ad1-b22a-5d32ecb0a8b0",
+      "name": "Check Continue",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-480, -32],
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "jsCode": "return new Promise(resolve => setTimeout(() => resolve([$input.first()]), 1000));"
+      },
+      "id": "rate-limit-delay",
+      "name": "Rate Limit Delay",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-400, -176]
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n  console.log('Reached true branch of Check Continue?', JSON.stringify($json));\n  return [$input.first()];\n} catch (error) {\n  console.error('Error in Debug True Branch:', error);\n  return [{ json: { error: error.message } }];\n}"
+      },
+      "id": "debug-true-branch",
+      "name": "Debug True Branch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-300, -176]
+    },
+    {
+      "parameters": {
+        "url": "https://api.eposnowhq.com/api/v4/Product/WebProducts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "page",
+              "value": "={{ $json.page }}"
+            }
+          ]
+        },
+        "options": {
+          "continueOnFail": true,
+          "responseDataOnError": true,
+          "timeout": 20000
+        }
+      },
+      "id": "a65ed226-d43c-497f-ab81-6115e203c8ee",
+      "name": "Get Products Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [-128, -176],
+      "credentials": {
+        "httpBasicAuth": {
+          "name": "EposNowApiCredentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n  const currentPage = $json.page || 1;\n  const allExistingProducts = $json.allProducts || [];\n  const wooCommerceItems = $json.wooCommerceItems || [];\n  const response = $input.first();\n\n  console.log(`[Process Page Results] Fetching page ${currentPage}, input:`, JSON.stringify($json, null, 2));\n\n  if (!response.json || response.error) {\n    console.log(`[Process Page Results] Error fetching page ${currentPage}:`, response.error ? JSON.stringify(response.error, null, 2) : 'Invalid response');\n    return [{ json: { page: currentPage, allProducts: allExistingProducts, wooCommerceItems, keepGoing: false, error: response.error ? JSON.stringify(response.error) : 'Invalid response' } }];\n  }\n\n  const newProducts = Array.isArray(response.json) ? response.json : [];\n  console.log(`[Process Page Results] Received ${newProducts.length} products for page ${currentPage}`);\n\n  const processedProductIds = new Set(allExistingProducts.map(p => p.Id));\n  const filteredProducts = newProducts.filter(p => !processedProductIds.has(p.Id));\n\n  console.log(`[Process Page Results] Page ${currentPage}: ${filteredProducts.length} new products, total: ${allExistingProducts.length + filteredProducts.length}`);\n\n  const combinedProducts = allExistingProducts.concat(filteredProducts);\n  const shouldContinue = filteredProducts.length === 200 && currentPage < 10;\n\n  console.log(`[Process Page Results] Advancing to page ${currentPage + 1}, keepGoing: ${shouldContinue}`);\n  return [{ json: { page: currentPage + 1, allProducts: combinedProducts, wooCommerceItems, keepGoing: shouldContinue } }];\n} catch (error) {\n  console.error('[Process Page Results] Error:', error);\n  return [{ json: { page: currentPage, allProducts: allExistingProducts, wooCommerceItems, keepGoing: false, error: error.message } }];\n}"
+      },
+      "id": "db3aca74-e9a9-4190-9757-9fc61d1a2182",
+      "name": "Process Page Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [64, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n  console.log('Input to Get ProductID:', JSON.stringify($json));\n  const wooCommerceItems = $json.wooCommerceItems || [];\n  const allEposProducts = $json.allProducts || [];\n  console.log(`Processing ${wooCommerceItems.length} WooCommerce items against ${allEposProducts.length} EposNow products`);\n  const results = [];\n  const unmatchedSkus = [];\n  wooCommerceItems.forEach(wooProduct => {\n    const targetSku = wooProduct.sku || '';\n    const quantity = wooProduct.quantity || 0;\n    const matchingProduct = allEposProducts.find(product => product.Barcode === targetSku);\n    if (matchingProduct) {\n      results.push({\n        productId: matchingProduct.Id,\n        sku: targetSku,\n        quantity: quantity,\n        productName: matchingProduct.Name\n      });\n    } else {\n      unmatchedSkus.push(targetSku);\n      console.log(`No match found for SKU: ${targetSku}`);\n    }\n  });\n  return [{ json: { results, unmatchedSkus, totalProductsSearched: allEposProducts.length, processedAt: new Date().toISOString(), status: results.length === 0 ? 'No matching products found' : 'Success' } }];\n} catch (error) {\n  console.error('Error in Get ProductID:', error);\n  return [{ json: { error: error.message, status: 'Error' } }];\n}"
+      },
+      "id": "fb235568-318e-45a2-a069-668e72eca213",
+      "name": "Get ProductID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [352, 288]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "value": "USLACKBOT",
+          "mode": "list",
+          "cachedResultName": "slackbot"
+        },
+        "messageType": "text",
+        "text": "Workflow completed at {{ $json.processedAt || new Date().toISOString() }}. {{ $json.results && $json.results.length > 0 ? 'Product IDs: ' + $json.results.map(item => item.productId).join(', ') : ($json.status || 'No products found') }}{{ $json.unmatchedSkus && $json.unmatchedSkus.length > 0 ? ' | Unmatched SKUs: ' + $json.unmatchedSkus.join(', ') : '' }}{{ $json.error ? ' | Error: ' + $json.error : '' }}"
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [560, 288],
+      "id": "bf3a8499-5cf9-4eac-a682-1f628cef24b7",
+      "name": "Send a message",
+      "webhookId": "59a39b6c-daf0-4699-ab20-c6cd7e447830",
+      "credentials": {
+        "slackOAuth2Api": {
+          "name": "SlackApiCredentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "{{$node[\"Split product items\"].json[\"error\"] || $node[\"Initialize Pagination\"].json[\"error\"] || $node[\"Process Page Results\"].json[\"error\"] || $node[\"Get ProductID\"].json[\"error\"]}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "error-handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [352, 480]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "errorMessage",
+              "value": "{{$node[\"Split product items\"].json[\"error\"] || $node[\"Initialize Pagination\"].json[\"error\"] || $node[\"Process Page Results\"].json[\"error\"] || $node[\"Get ProductID\"].json[\"error\"]}}"
+            }
+          ]
+        }
+      },
+      "id": "log-error",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [560, 576]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Split product items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split product items": {
+      "main": [
+        [
+          {
+            "node": "Check Split Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Split Error": {
+      "main": [
+        [
+          {
+            "node": "Initialize Pagination",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initialize Pagination": {
+      "main": [
+        [
+          {
+            "node": "Debug Before Check Continue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Debug Before Check Continue": {
+      "main": [
+        [
+          {
+            "node": "Check Continue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Continue": {
+      "true": [
+        [
+          {
+            "node": "Rate Limit Delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "false": [
+        [
+          {
+            "node": "Get ProductID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit Delay": {
+      "main": [
+        [
+          {
+            "node": "Debug True Branch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Debug True Branch": {
+      "main": [
+        [
+          {
+            "node": "Get Products Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Products Page": {
+      "main": [
+        [
+          {
+            "node": "Process Page Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Page Results": {
+      "main": [
+        [
+          {
+            "node": "Check Continue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get ProductID": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Error": {
+      "main": [[]]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "errorHandling": {
+      "continueOnFail": true
+    }
+  },
+  "versionId": "05abccfd-6e70-474e-b350-8dc3cf0b291f",
+  "meta": {
+    "instanceId": "c01c7505886d403093023cdf3f867c5c7d1ddd56bbcb91f78d44406dbb0328b9"
+  },
+  "id": "JiM11gpxjPiLdjAQ",
+  "tags": []
+}
