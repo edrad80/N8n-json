@@ -63,7 +63,7 @@
     },
     {
       "parameters": {
-        "jsCode": "try {\n  const input = $input.first().json;\n  console.log('Evaluating keepGoing:', input.keepGoing, typeof input.keepGoing);\n  if (input.keepGoing === true) {\n    console.log('Check Continue: Taking true branch');\n    return { true: [$input.first()], false: [] };\n  } else {\n    console.log('Check Continue: Taking false branch');\n    return { true: [], false: [$input.first()] };\n  }\n} catch (error) {\n  console.error('Error in Check Continue:', error);\n  return { true: [], false: [$input.first()] };\n}"
+        "jsCode": "try {\n  const input = $input.first().json;\n  console.log('Evaluating keepGoing:', input.keepGoing, typeof input.keepGoing);\n  if (input.keepGoing) {\n    console.log('Check Continue: Taking true branch');\n    return { true: [$input.first()], false: [] };\n  } else {\n    console.log('Check Continue: Taking false branch');\n    return { true: [], false: [$input.first()] };\n  }\n} catch (error) {\n  console.error('Error in Check Continue:', error);\n  return { true: [], false: [$input.first()] };\n}"
       },
       "id": "b9883b8f-381e-4ad1-b22a-5d32ecb0a8b0",
       "name": "Check Continue",
