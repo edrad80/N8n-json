@@ -45,7 +45,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Debug: Log the API request details\nconsole.log('=== API REQUEST DEBUG ===');\nconsole.log('Current page:', $json.currentPage);\n// Note: The actual URL used by Fetch EposNow Products does NOT include per_page=200\n// as adding it breaks the API call.\nconsole.log('API URL will be: https://api.eposnowhq.com/api/v4/Product/WebProducts?pageNumber=' + $json.currentPage);\nreturn [$input.all()[0]];"
+        "jsCode": "// Debug: Log the API request details\nconsole.log('=== API REQUEST DEBUG ===');\nconsole.log('Current page:', $json.currentPage);\n// Note: The actual URL used by Fetch EposNow Products does NOT include per_page=200\n// as adding it breaks the API call.\nconsole.log('API URL will be: https://api.eposnowhq.com/api/v4/Product/WebProducts?page=' + $json.currentPage);\nreturn [$input.all()[0]];"
       },
       "id": "21f806b6-94cd-404c-8c26-10eb8fdf86b9",
       "name": "Debug API Request",
@@ -58,7 +58,7 @@
     },
     {
       "parameters": {
-        "url": "=https://api.eposnowhq.com/api/v4/Product/WebProducts?pageNumber={{ $json.currentPage }}",
+        "url": "=https://api.eposnowhq.com/api/v4/Product/WebProducts?page={{ $json.currentPage }}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth",
         "sendHeaders": true,
