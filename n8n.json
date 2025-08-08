@@ -1,394 +1,299 @@
 {
-  "name": "Goodhome Order Created",
+  "name": "My workflow 7 WIP copy",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "b3f150a8-fdf9-4031-9839-9aa7d0e7a681",
+        "path": "533888f0-b4b8-4b4f-be22-fb500d695a72",
         "options": {}
       },
+      "id": "a7837b10-32f1-482a-83eb-871f4324d62d",
+      "name": "WooCommerce Webhook",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [-832, -352],
-      "id": "a9a797c7-2aee-4583-8b5a-5ee836ef88da",
-      "name": "Webhook",
-      "webhookId": "b3f150a8-fdf9-4031-9839-9aa7d0e7a681"
-    },
-    {
-      "parameters": {
-        "jsCode": "try {\n  if (!$json || !$json.body || !$json.body.line_items) {\n    console.log('Error: Missing or invalid request body');\n    return [{ json: { error: 'Missing or invalid request body' } }];\n  }\n  const items = $json.body.line_items;\n  if (!Array.isArray(items)) {\n    console.log('Error: line_items is not an array');\n    return [{ json: { error: 'line_items is not an array' } }];\n  }\n  console.log(`Parsed ${items.length} WooCommerce items`);\n  return [{ json: { items: items.map(item => ({ sku: item.sku || '', quantity: item.quantity || 0 })) } }];\n} catch (error) {\n  console.error('Error in Split product items:', error);\n  return [{ json: { error: error.message } }];\n}"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [-832, -160],
-      "id": "e6ec1f37-9c5c-4206-8757-0f06383c1889",
-      "name": "Split product items"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "{{$node[\"Split product items\"].json[\"error\"]}}",
-              "operation": "isNotEmpty"
-            }
-          ]
-        }
-      },
-      "id": "error-check-split",
-      "name": "Check Split Error",
-      "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [-832, 0]
+      "position": [
+        -1792,
+        0
+      ],
+      "webhookId": "533888f0-b4b8-4b4f-be22-fb500d695a72"
     },
     {
       "parameters": {
-        "jsCode": "try {\n  const inputData = $input.first().json;\n  console.log('Input to Initialize Pagination:', JSON.stringify(inputData));\n  const items = inputData.items || [];\n  console.log('WooCommerce items:', items);\n  const output = [{ json: { page: 1, allProducts: [], keepGoing: true, wooCommerceItems: items } }];\n  console.log('Output of Initialize Pagination:', JSON.stringify(output));\n  return output;\n} catch (error) {\n  console.error('Error in Initialize Pagination:', error);\n  return [{ json: { error: error.message } }];\n}"
+        "options": {}
       },
-      "id": "57b9c4bc-431d-4af1-90b5-44670f01ed1b",
-      "name": "Initialize Pagination",
+      "id": "5aa5de96-301a-43be-8491-36002b1ca3ea",
+      "name": "Extract Order Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        -1568,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Debug: Log the extracted order data\nconst orderData = $node['Extract Order Data'].json;\nconsole.log('=== ORDER DATA DEBUG ===');\nconsole.log('Order ID:', orderData.orderId);\nconsole.log('Order Number:', orderData.orderNumber);\nconsole.log('Products:', JSON.stringify(orderData.products, null, 2));\nconsole.log('Products count:', orderData.products ? orderData.products.length : 0);\n// Initialize variables for pagination\nreturn [{\n  json: {\n    eposProducts: [],\n    currentPage: 1,\n    hasMorePages: true, // Start the loop\n    totalProducts: 0,\n    orderData: orderData\n  }\n}];"
+      },
+      "id": "483d9cd2-bbbb-4327-8596-2fa758c83e5f",
+      "name": "Initialize State",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-768, 80]
+      "position": [
+        -1360,
+        0
+      ]
     },
     {
       "parameters": {
-        "jsCode": "try {\n  console.log('Input to Check Continue:', JSON.stringify($input.first().json));\n  return [$input.first()];\n} catch (error) {\n  console.error('Error in Debug Before Check Continue:', error);\n  return [{ json: { error: error.message } }];\n}"
+        "jsCode": "// Debug: Log the API request details\nconsole.log('=== API REQUEST DEBUG ===');\nconsole.log('Current page:', $json.currentPage);\n// Note: The actual URL used by Fetch EposNow Products does NOT include per_page=200\n// as adding it breaks the API call.\nconsole.log('API URL will be: https://api.eposnowhq.com/api/v4/Product/WebProducts?page=' + $json.currentPage /* + '&per_page=200' */);\nreturn [$input.all()[0]];"
       },
-      "id": "debug-before-should-continue",
-      "name": "Debug Before Check Continue",
+      "id": "21f806b6-94cd-404c-8c26-10eb8fdf86b9",
+      "name": "Debug API Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-600, -240]
+      "position": [
+        -1136,
+        -128
+      ]
     },
     {
       "parameters": {
-        "jsCode": "try {\n  const input = $input.first().json;\n  console.log('Evaluating keepGoing:', input.keepGoing, typeof input.keepGoing);\n  if (input.keepGoing === true) {\n    console.log('Check Continue: Taking true branch');\n    return { true: [$input.first()], false: [] };\n  } else {\n    console.log('Check Continue: Taking false branch');\n    return { true: [], false: [$input.first()] };\n  }\n} catch (error) {\n  console.error('Error in Check Continue:', error);\n  return { true: [], false: [$input.first()] };\n}"
-      },
-      "id": "b9883b8f-381e-4ad1-b22a-5d32ecb0a8b0",
-      "name": "Check Continue",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [-480, -32],
-      "executeOnce": false
-    },
-    {
-      "parameters": {
-        "jsCode": "return new Promise(resolve => setTimeout(() => resolve([$input.first()]), 1000));"
-      },
-      "id": "rate-limit-delay",
-      "name": "Rate Limit Delay",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [-400, -176]
-    },
-    {
-      "parameters": {
-        "jsCode": "try {\n  console.log('Reached true branch of Check Continue?', JSON.stringify($json));\n  return [$input.first()];\n} catch (error) {\n  console.error('Error in Debug True Branch:', error);\n  return [{ json: { error: error.message } }];\n}"
-      },
-      "id": "debug-true-branch",
-      "name": "Debug True Branch",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [-300, -176]
-    },
-    {
-      "parameters": {
-        "url": "https://api.eposnowhq.com/api/v4/Product/WebProducts",
+        "url": "=https://api.eposnowhq.com/api/v4/Product/WebProducts?page={{ $json.currentPage }}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "accept",
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
               "value": "application/json"
             }
           ]
         },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "page",
-              "value": "={{ $json.page }}"
-            }
-          ]
-        },
         "options": {
-          "continueOnFail": true,
-          "responseDataOnError": true,
-          "timeout": 20000
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
         }
       },
-      "id": "a65ed226-d43c-497f-ab81-6115e203c8ee",
-      "name": "Get Products Page",
+      "id": "5ee3cdc6-e50a-4e2a-82e9-41ab2918d136",
+      "name": "Fetch EposNow Products",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [-128, -176],
+      "position": [
+        -1184,
+        320
+      ],
       "credentials": {
         "httpBasicAuth": {
-          "name": "EposNowApiCredentials"
+          "id": "Cqh8nJJyHpWCBAdg",
+          "name": "Unnamed credential"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "try {\n  const currentPage = $json.page || 1;\n  const allExistingProducts = $json.allProducts || [];\n  const wooCommerceItems = $json.wooCommerceItems || [];\n  const response = $input.first();\n\n  console.log(`[Process Page Results] Fetching page ${currentPage}, input:`, JSON.stringify($json, null, 2));\n\n  if (!response.json || response.error) {\n    console.log(`[Process Page Results] Error fetching page ${currentPage}:`, response.error ? JSON.stringify(response.error, null, 2) : 'Invalid response');\n    return [{ json: { page: currentPage, allProducts: allExistingProducts, wooCommerceItems, keepGoing: false, error: response.error ? JSON.stringify(response.error) : 'Invalid response' } }];\n  }\n\n  const newProducts = Array.isArray(response.json) ? response.json : [];\n  console.log(`[Process Page Results] Received ${newProducts.length} products for page ${currentPage}`);\n\n  const processedProductIds = new Set(allExistingProducts.map(p => p.Id));\n  const filteredProducts = newProducts.filter(p => !processedProductIds.has(p.Id));\n\n  console.log(`[Process Page Results] Page ${currentPage}: ${filteredProducts.length} new products, total: ${allExistingProducts.length + filteredProducts.length}`);\n\n  const combinedProducts = allExistingProducts.concat(filteredProducts);\n  const shouldContinue = filteredProducts.length === 200 && currentPage < 10;\n\n  console.log(`[Process Page Results] Advancing to page ${currentPage + 1}, keepGoing: ${shouldContinue}`);\n  return [{ json: { page: currentPage + 1, allProducts: combinedProducts, wooCommerceItems, keepGoing: shouldContinue } }];\n} catch (error) {\n  console.error('[Process Page Results] Error:', error);\n  return [{ json: { page: currentPage, allProducts: allExistingProducts, wooCommerceItems, keepGoing: false, error: error.message } }];\n}"
+        "jsCode": "// Debug: Log the API response\nconst apiResponse = $input.all()[0].json;\nconsole.log('=== API RESPONSE DEBUG ===');\nconsole.log('Full API Response:', JSON.stringify(apiResponse, null, 2));\n\n// Get the current state from the input (passed from previous nodes)\nconst currentState = $json || {};\n\n// Extract products from API response - handle different response structures\nlet newProducts = [];\n// Check if the response is a single product object (has Id field)\nif (apiResponse && apiResponse.Id && typeof apiResponse.Id === 'number') {\n  console.log('Response is a single product object');\n  newProducts = [apiResponse];\n} \n// Check if response is an array of products\nelse if (Array.isArray(apiResponse)) {\n  console.log('Response is an array of products');\n  newProducts = apiResponse;\n} \n// Check if response has a data array\nelse if (apiResponse.data && Array.isArray(apiResponse.data)) {\n  console.log('Response has data array');\n  newProducts = apiResponse.data;\n} \n// Check for other possible array containers\nelse if (apiResponse.products && Array.isArray(apiResponse.products)) {\n  newProducts = apiResponse.products;\n} else if (apiResponse.items && Array.isArray(apiResponse.items)) {\n  newProducts = apiResponse.items;\n}\n\nconsole.log('Extracted products count:', newProducts.length);\nif (newProducts.length > 0) {\n  console.log('First product sample:', JSON.stringify(newProducts[0], null, 2));\n}\n\n// Combine with existing products\nlet allProducts = currentState.eposProducts || [];\nallProducts = allProducts.concat(newProducts);\n\n// --- FIXED PAGINATION LOGIC ---\n// Handle pagination - EposNow API v4 WebProducts does not provide pagination metadata in the response.\n// When called without per_page, it returns only 1 product per page based on testing.\n// Therefore, we must assume there are more pages unless the current page returns 0 items.\n// This will lead to an extra, final request that returns 0 items, which will correctly stop the loop.\nconst currentPage = currentState.currentPage || 1; // Use the state value passed in\nconst lastPage = 'unknown'; // Cannot determine from response\n// Assume more pages exist if we received any products on this page.\nlet hasMorePages = (newProducts.length > 0);\n\n// Optional Safety Check (Uncomment and adjust if needed):\n// const maxPages = 50000; // Adjust based on known product count\n// if (currentPage >= maxPages) {\n//   console.log(`Reached maximum page limit (${maxPages}), stopping to prevent infinite loop.`);\n//   hasMorePages = false;\n// }\n// --- END FIXED PAGINATION LOGIC ---\n\nconsole.log(`Fetched page ${currentPage} of ${lastPage || 'unknown'}`);\nconsole.log(`Products on this page: ${newProducts.length}`);\nconsole.log(`Total products collected: ${allProducts.length}`);\nconsole.log(`Has more pages: ${hasMorePages}`);\n\nreturn [{\n  json: {\n    eposProducts: allProducts,\n    // Pass the NEXT page number for the subsequent request\n    currentPage: currentPage + 1,\n    hasMorePages: hasMorePages,\n    totalProducts: allProducts.length,\n    totalPages: lastPage || 'unknown',\n    orderData: currentState.orderData || {}\n  }\n}];"
       },
-      "id": "db3aca74-e9a9-4190-9757-9fc61d1a2182",
-      "name": "Process Page Results",
+      "id": "2e68aafb-f48b-4eb2-855f-6aaf56d9341d",
+      "name": "Process Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [64, 0]
-    },
-    {
-      "parameters": {
-        "jsCode": "try {\n  console.log('Input to Get ProductID:', JSON.stringify($json));\n  const wooCommerceItems = $json.wooCommerceItems || [];\n  const allEposProducts = $json.allProducts || [];\n  console.log(`Processing ${wooCommerceItems.length} WooCommerce items against ${allEposProducts.length} EposNow products`);\n  const results = [];\n  const unmatchedSkus = [];\n  wooCommerceItems.forEach(wooProduct => {\n    const targetSku = wooProduct.sku || '';\n    const quantity = wooProduct.quantity || 0;\n    const matchingProduct = allEposProducts.find(product => product.Barcode === targetSku);\n    if (matchingProduct) {\n      results.push({\n        productId: matchingProduct.Id,\n        sku: targetSku,\n        quantity: quantity,\n        productName: matchingProduct.Name\n      });\n    } else {\n      unmatchedSkus.push(targetSku);\n      console.log(`No match found for SKU: ${targetSku}`);\n    }\n  });\n  return [{ json: { results, unmatchedSkus, totalProductsSearched: allEposProducts.length, processedAt: new Date().toISOString(), status: results.length === 0 ? 'No matching products found' : 'Success' } }];\n} catch (error) {\n  console.error('Error in Get ProductID:', error);\n  return [{ json: { error: error.message, status: 'Error' } }];\n}"
-      },
-      "id": "fb235568-318e-45a2-a069-668e72eca213",
-      "name": "Get ProductID",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [352, 288]
-    },
-    {
-      "parameters": {
-        "authentication": "oAuth2",
-        "select": "user",
-        "user": {
-          "__rl": true,
-          "value": "USLACKBOT",
-          "mode": "list",
-          "cachedResultName": "slackbot"
-        },
-        "messageType": "text",
-        "text": "Workflow completed at {{ $json.processedAt || new Date().toISOString() }}. {{ $json.results && $json.results.length > 0 ? 'Product IDs: ' + $json.results.map(item => item.productId).join(', ') : ($json.status || 'No products found') }}{{ $json.unmatchedSkus && $json.unmatchedSkus.length > 0 ? ' | Unmatched SKUs: ' + $json.unmatchedSkus.join(', ') : '' }}{{ $json.error ? ' | Error: ' + $json.error : '' }}"
-      },
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 2.3,
-      "position": [560, 288],
-      "id": "bf3a8499-5cf9-4eac-a682-1f628cef24b7",
-      "name": "Send a message",
-      "webhookId": "59a39b6c-daf0-4699-ab20-c6cd7e447830",
-      "credentials": {
-        "slackOAuth2Api": {
-          "name": "SlackApiCredentials"
-        }
-      }
+      "position": [
+        -928,
+        -96
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "string": [
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
             {
-              "value1": "{{$node[\"Split product items\"].json[\"error\"] || $node[\"Initialize Pagination\"].json[\"error\"] || $node[\"Process Page Results\"].json[\"error\"] || $node[\"Get ProductID\"].json[\"error\"]}}",
-              "operation": "isNotEmpty"
+              "id": "condition1",
+              "leftValue": "={{ $json.hasMorePages }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
             }
-          ]
-        }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
       },
-      "id": "error-handler",
-      "name": "Error Handler",
+      "id": "299d4109-39b7-4cfe-81d9-29458afbd012",
+      "name": "Has More Pages?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [352, 480]
+      "typeVersion": 2,
+      "position": [
+        -720,
+        -224
+      ]
     },
     {
       "parameters": {
-        "values": {
-          "string": [
-            {
-              "name": "errorMessage",
-              "value": "{{$node[\"Split product items\"].json[\"error\"] || $node[\"Initialize Pagination\"].json[\"error\"] || $node[\"Process Page Results\"].json[\"error\"] || $node[\"Get ProductID\"].json[\"error\"]}}"
-            }
-          ]
-        }
+        "options": {}
       },
-      "id": "log-error",
-      "name": "Log Error",
+      "id": "55d7aa57-a051-4e36-a107-a7f2ae81b7b2",
+      "name": "Update State",
       "type": "n8n-nodes-base.set",
-      "typeVersion": 1,
-      "position": [560, 576]
+      "typeVersion": 3.1,
+      "position": [
+        -480,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// All products have been fetched, now match with WooCommerce products\nconst allEposProducts = $json.eposProducts || [];\nconst orderData = $json.orderData || {};\nconst orderProducts = orderData.products || [];\nconsole.log('=== MATCHING DEBUG ===');\nconsole.log(`Total EposNow products fetched: ${allEposProducts.length}`);\nconsole.log(`Order products to match: ${orderProducts.length}`);\nif (allEposProducts.length > 0) {\n  console.log('Sample EposNow product:', JSON.stringify(allEposProducts[0], null, 2));\n}\nif (orderProducts.length > 0) {\n  console.log('Sample order product:', JSON.stringify(orderProducts[0], null, 2));\n}\n// Create matches array\nconst matches = [];\nconst unmatched = [];\nfor (const orderProduct of orderProducts) {\n  const sku = orderProduct.sku;\n  const quantityOrdered = orderProduct.quantity;\n  console.log(`Processing order product: ${orderProduct.name}, SKU: ${sku}, Qty: ${quantityOrdered}`);\n  if (!sku || sku.trim() === '') {\n    console.log(`Skipping product without SKU: ${orderProduct.name}`);\n    unmatched.push({\n      reason: 'No SKU',\n      name: orderProduct.name,\n      quantity: quantityOrdered\n    });\n    continue;\n  }\n  // Find matching EposNow product by SKU (try multiple fields)\n  const eposProduct = allEposProducts.find(product => {\n    const productSku = product.sku || product.SKU || '';\n    const productBarcode = product.barcode || product.Barcode || '';\n    const productCode = product.product_code || product.ProductCode || product.code || '';\n    const productReference = product.reference || product.Reference || '';\n    const match = productSku.toLowerCase() === sku.toLowerCase() || \n           productBarcode.toLowerCase() === sku.toLowerCase() ||\n           productCode.toLowerCase() === sku.toLowerCase() ||\n           productReference.toLowerCase() === sku.toLowerCase();\n    if (match) {\n      console.log(`Found match for SKU ${sku} with EposNow product:`, product.name || product.Name);\n    }\n    return match;\n  });\n  if (eposProduct) {\n    const currentStock = parseInt(eposProduct.stock_level || eposProduct.StockLevel || eposProduct.stock || 0) || 0;\n    const newStockLevel = Math.max(0, currentStock - quantityOrdered);\n    matches.push({\n      woocommerce_sku: sku,\n      woocommerce_product_name: orderProduct.name,\n      woocommerce_quantity: quantityOrdered,\n      eposnow_product_id: eposProduct.id || eposProduct.Id || eposProduct.ID,\n      eposnow_product_name: eposProduct.name || eposProduct.Name || eposProduct.description,\n      eposnow_current_stock: currentStock,\n      new_stock_level: newStockLevel,\n      stock_reduction: quantityOrdered\n    });\n    console.log(`✓ Matched SKU '${sku}' -> EposNow Product ID ${eposProduct.id || eposProduct.Id}`);\n  } else {\n    unmatched.push({\n      reason: 'Not found in EposNow',\n      sku: sku,\n      name: orderProduct.name,\n      quantity: quantityOrdered\n    });\n    console.log(`✗ No EposNow product found for SKU: ${sku}`);\n  }\n}\nconsole.log(`Successfully matched: ${matches.length} products`);\nconsole.log(`Failed to match: ${unmatched.length} products`);\nif (unmatched.length > 0) {\n  console.log('Unmatched products:', JSON.stringify(unmatched, null, 2));\n}\n// Return matches for processing (each as separate item)\nif (matches.length === 0) {\n  return [{\n    json: {\n      error: \"No matching products found\",\n      unmatched: unmatched,\n      total_order_products: orderProducts.length,\n      total_epos_products: allEposProducts.length,\n      debug: {\n        orderData: orderData,\n        sampleEposProduct: allEposProducts[0] || null\n      }\n    }\n  }];\n}\nreturn matches.map(match => ({ json: match }));"
+      },
+      "id": "067a8a9d-ff8e-4ad4-9985-352ca630f9e4",
+      "name": "Match Products by SKU",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -688,
+        208
+      ]
     }
   ],
   "pinData": {},
   "connections": {
-    "Webhook": {
+    "WooCommerce Webhook": {
       "main": [
         [
           {
-            "node": "Split product items",
+            "node": "Extract Order Data",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Split product items": {
+    "Extract Order Data": {
       "main": [
         [
           {
-            "node": "Check Split Error",
+            "node": "Initialize State",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check Split Error": {
+    "Initialize State": {
       "main": [
         [
           {
-            "node": "Initialize Pagination",
+            "node": "Debug API Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Debug API Request": {
+      "main": [
+        [
+          {
+            "node": "Fetch EposNow Products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch EposNow Products": {
+      "main": [
+        [
+          {
+            "node": "Process Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Response": {
+      "main": [
+        [
+          {
+            "node": "Has More Pages?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has More Pages?": {
+      "main": [
+        [
+          {
+            "node": "Update State",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Error Handler",
+            "node": "Match Products by SKU",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Initialize Pagination": {
+    "Update State": {
       "main": [
         [
           {
-            "node": "Debug Before Check Continue",
+            "node": "Fetch EposNow Products",
             "type": "main",
             "index": 0
           }
         ]
       ]
-    },
-    "Debug Before Check Continue": {
-      "main": [
-        [
-          {
-            "node": "Check Continue",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Check Continue": {
-      "true": [
-        [
-          {
-            "node": "Rate Limit Delay",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ],
-      "false": [
-        [
-          {
-            "node": "Get ProductID",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Rate Limit Delay": {
-      "main": [
-        [
-          {
-            "node": "Debug True Branch",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Debug True Branch": {
-      "main": [
-        [
-          {
-            "node": "Get Products Page",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Products Page": {
-      "main": [
-        [
-          {
-            "node": "Process Page Results",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Process Page Results": {
-      "main": [
-        [
-          {
-            "node": "Check Continue",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get ProductID": {
-      "main": [
-        [
-          {
-            "node": "Send a message",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Error Handler",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Error Handler": {
-      "main": [
-        [
-          {
-            "node": "Log Error",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Send a message",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Log Error": {
-      "main": [[]]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
-    "executionOrder": "v1",
-    "errorHandling": {
-      "continueOnFail": true
-    }
+    "executionOrder": "v1"
   },
-  "versionId": "05abccfd-6e70-474e-b350-8dc3cf0b291f",
+  "versionId": "849c6441-adb8-4bf2-b6eb-b2315a498533",
   "meta": {
     "instanceId": "c01c7505886d403093023cdf3f867c5c7d1ddd56bbcb91f78d44406dbb0328b9"
   },
-  "id": "JiM11gpxjPiLdjAQ",
-  "tags": []
+  "id": "BYSNh0hoPwbpl7kg",
+  "tags": [
+    {
+      "createdAt": "2025-08-06T04:47:31.195Z",
+      "updatedAt": "2025-08-06T04:47:31.195Z",
+      "id": "47YI2QQOcDJ61cZt",
+      "name": "woocommerce"
+    },
+    {
+      "createdAt": "2025-08-06T04:47:31.168Z",
+      "updatedAt": "2025-08-06T04:47:31.168Z",
+      "id": "EIsosJ9Ek3Cb0y7L",
+      "name": "eposnow"
+    },
+    {
+      "createdAt": "2025-08-06T04:47:31.182Z",
+      "updatedAt": "2025-08-06T04:47:31.182Z",
+      "id": "qY2U0EPW908nUWuf",
+      "name": "inventory-sync"
+    }
+  ]
 }
